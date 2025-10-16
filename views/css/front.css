@@ -1,0 +1,145 @@
+/* modules/promobar/views/css/front.css */
+/* @license MIT */
+#promobar {
+  width: 100%;
+  z-index: 1000;
+  font-size: 14px;
+}
+
+.promobar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+
+.promobar__message {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* === COUNTDOWN – compact badges "01d 06h 57m 31s" === */
+.promobar__countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.promobar__cd-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px 1px 4px;
+  background: #ffffff;
+  color: #333;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06) inset, 0 1px 3px rgba(0, 0, 0, 0.12);
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* fixed width number for stability */
+.promobar__cd-number {
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* small unit to the right of the number */
+.promobar__cd-label {
+  margin-left: 0.2rem;
+  font-size: 0.75em;
+  opacity: 0.9;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* hide any legacy ":" separators if present */
+.promobar__cd-separator {
+  display: none;
+}
+
+/* === CTA === */
+.promobar__cta {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.promobar__cta:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* === Close === */
+.promobar__close {
+  margin-left: 0.25rem;
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* === Animations (accessibility: respects prefers-reduced-motion) === */
+@media (prefers-reduced-motion: reduce) {
+  .promobar--scroll .promobar__marquee,
+  .promobar--pulse .promobar__message,
+  .promobar--blink .promobar__message {
+    animation: none !important;
+  }
+}
+
+/* Horizontal marquee */
+.promobar--scroll .promobar__marquee {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+  animation: promobar-marquee 15s linear infinite;
+}
+
+@keyframes promobar-marquee {
+  0% {
+    transform: translate3d(100vw, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+/* Soft pulse */
+.promobar--pulse .promobar__message {
+  animation: promobar-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes promobar-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Light blink */
+.promobar--blink .promobar__message {
+  animation: promobar-blink 1.2s steps(2, start) infinite;
+}
+
+@keyframes promobar-blink {
+  to {
+    visibility: hidden;
+  }
+}
