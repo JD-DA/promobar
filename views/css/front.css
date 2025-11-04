@@ -4,6 +4,127 @@
   width: 100%;
   z-index: 1000;
   font-size: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* === CAROUSEL STRUCTURE === */
+.promobar--carousel .promobar__track {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Base carousel slide styles */
+.promobar--carousel .promobar__slide {
+  width: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease-in-out;
+}
+
+.promobar--carousel .promobar__slide--active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* When not active, hide completely but keep in flow for first active */
+.promobar--carousel .promobar__slide:not(.promobar__slide--active) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* === FADE TRANSITION === */
+.promobar--carousel.promobar--fade .promobar__slide {
+  transition: opacity 0.6s ease-in-out;
+  transform: translateX(0);
+}
+
+/* === SLIDE TRANSITION === */
+/* Default: slides are hidden */
+.promobar--carousel.promobar--slide .promobar__slide {
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  opacity: 0;
+}
+
+/* Incoming slide from right (default/next) */
+.promobar--carousel.promobar--slide .promobar__slide.promobar__slide--from-right {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* Incoming slide from left (prev) */
+.promobar--carousel.promobar--slide .promobar__slide.promobar__slide--from-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* Active slide is centered and visible */
+.promobar--carousel.promobar--slide .promobar__slide--active {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Leaving slide slides out to the left (going forward/next) */
+.promobar--carousel.promobar--slide .promobar__slide.promobar__slide--leaving {
+  transform: translateX(-100%);
+  opacity: 1;
+}
+
+/* Leaving slide slides out to the right (going backward/prev) */
+.promobar--carousel.promobar--slide .promobar__slide.promobar__slide--leaving-right {
+  transform: translateX(100%);
+  opacity: 1;
+}
+
+/* Arrow buttons */
+.promobar__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  padding: 8px;
+  cursor: pointer;
+  z-index: 10;
+  transition: opacity 0.2s ease;
+  opacity: 0.6;
+}
+
+.promobar__arrow:hover {
+  opacity: 1;
+}
+
+.promobar__arrow:focus {
+  outline: none;
+}
+
+/* Dark controls (default - for light backgrounds) */
+.promobar--controls-dark .promobar__arrow {
+  color: #000000;
+}
+
+/* Light controls (for dark backgrounds) */
+.promobar--controls-light .promobar__arrow {
+  color: #ffffff;
+}
+
+.promobar__arrow--prev {
+  left: 10px;
+}
+
+.promobar__arrow--next {
+  right: 40px; /* Space for close button */
+}
+
+/* Non-carousel mode */
+.promobar:not(.promobar--carousel) .promobar__slide {
+  display: block;
+  opacity: 1;
 }
 
 .promobar__inner {
@@ -90,6 +211,56 @@
   line-height: 1;
   cursor: pointer;
   color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.promobar__close:hover {
+  opacity: 1;
+}
+
+.promobar__close:focus {
+  outline: none;
+}
+
+/* Close button positioning in carousel mode */
+.promobar--carousel .promobar__close {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  padding: 4px;
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+  opacity: 0.6;
+}
+
+.promobar--carousel .promobar__close:hover {
+  opacity: 1;
+}
+
+/* Dark controls (default - for light backgrounds) */
+.promobar--controls-dark .promobar__close {
+  color: #000000;
+}
+
+/* Light controls (for dark backgrounds) */
+.promobar--controls-light .promobar__close {
+  color: #ffffff;
+}
+
+/* Adjust arrow position when close button is present */
+.promobar--carousel .promobar__arrow--next {
+  right: 50px; /* Space for close button */
 }
 
 /* === Animations (accessibility: respects prefers-reduced-motion) === */

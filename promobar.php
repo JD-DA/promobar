@@ -15,15 +15,30 @@ class Promobar extends Module
     // Config keys
     public const CFG_ENABLED = 'PROMOBAR_ENABLED';
     public const CFG_DISMISSIBLE = 'PROMOBAR_DISMISSIBLE';
+    public const CFG_POSITION = 'PROMOBAR_POSITION';      // 'afterbody' | 'top'
+    public const CFG_COOKIE_DAYS = 'PROMOBAR_COOKIE_DAYS';   // int
+
+    // Global styling
+    public const CFG_BG_COLOR = 'PROMOBAR_BG_COLOR';     // Global background color
+    public const CFG_CONTROLS_COLOR = 'PROMOBAR_CONTROLS_COLOR';  // 'dark' | 'light'
+
+    // Carousel settings
+    public const CFG_CAROUSEL_ENABLED = 'PROMOBAR_CAROUSEL_ENABLED';
+    public const CFG_CAROUSEL_TRANSITION = 'PROMOBAR_CAROUSEL_TRANSITION';  // 'fade' | 'slide'
+    public const CFG_CAROUSEL_INTERVAL = 'PROMOBAR_CAROUSEL_INTERVAL';      // seconds
+    public const CFG_CAROUSEL_ARROWS = 'PROMOBAR_CAROUSEL_ARROWS';          // bool
+    public const CFG_CAROUSEL_PAUSE = 'PROMOBAR_CAROUSEL_PAUSE';            // bool (pause on hover)
+
+    // Messages (JSON array of message objects with individual settings)
+    public const CFG_MESSAGES = 'PROMOBAR_MESSAGES';
+
+    // Legacy keys (for migration)
     public const CFG_MESSAGE = 'PROMOBAR_MESSAGE';       // multilingual
-    public const CFG_BG_COLOR = 'PROMOBAR_BG_COLOR';
     public const CFG_TEXT_COLOR = 'PROMOBAR_TEXT_COLOR';
     public const CFG_START_DATE = 'PROMOBAR_START_DATE';
     public const CFG_END_DATE = 'PROMOBAR_END_DATE';
-    public const CFG_COOKIE_DAYS = 'PROMOBAR_COOKIE_DAYS';   // int
     public const CFG_FONT_FAMILY = 'PROMOBAR_FONT_FAMILY';   // whitelist
     public const CFG_ANIMATION = 'PROMOBAR_ANIMATION';     // enum: none,scroll,pulse,blink
-    public const CFG_POSITION = 'PROMOBAR_POSITION';      // 'afterbody' | 'top'
     public const CFG_COUNTDOWN = 'PROMOBAR_COUNTDOWN';     // bool
     public const CFG_CTA_ENABLED = 'PROMOBAR_CTA_ENABLED';
     public const CFG_CTA_TEXT = 'PROMOBAR_CTA_TEXT';      // multilingual
@@ -65,76 +80,115 @@ class Promobar extends Module
 
         $idShop = (int) $this->context->shop->id;
 
-        // Defaults
+        // Global settings
         Configuration::updateValue(self::CFG_ENABLED, 1, false, null, $idShop);
         Configuration::updateValue(self::CFG_DISMISSIBLE, 1, false, null, $idShop);
-        Configuration::updateValue(self::CFG_BG_COLOR, '#111111', false, null, $idShop);
-        Configuration::updateValue(self::CFG_TEXT_COLOR, '#ffffff', false, null, $idShop);
-        Configuration::updateValue(self::CFG_START_DATE, '', false, null, $idShop);
-        Configuration::updateValue(self::CFG_END_DATE, '', false, null, $idShop);
-
-        Configuration::updateValue(self::CFG_COOKIE_DAYS, 30, false, null, $idShop);
-        Configuration::updateValue(self::CFG_FONT_FAMILY, 'system-ui', false, null, $idShop);
-        Configuration::updateValue(self::CFG_ANIMATION, 'none', false, null, $idShop);
         Configuration::updateValue(self::CFG_POSITION, 'afterbody', false, null, $idShop);
-        Configuration::updateValue(self::CFG_COUNTDOWN, 0, false, null, $idShop);
+        Configuration::updateValue(self::CFG_COOKIE_DAYS, 30, false, null, $idShop);
+        Configuration::updateValue(self::CFG_BG_COLOR, '#111111', false, null, $idShop);
+        Configuration::updateValue(self::CFG_CONTROLS_COLOR, 'light', false, null, $idShop);
 
-        Configuration::updateValue(self::CFG_CTA_ENABLED, 0, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_URL, '', false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_BG_COLOR, 'transparent', false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_TEXT_COLOR, '#ffffff', false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_BORDER, '#ffffff', false, null, $idShop);
+        // Carousel settings
+        Configuration::updateValue(self::CFG_CAROUSEL_ENABLED, 0, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_TRANSITION, 'fade', false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_INTERVAL, 5, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_ARROWS, 1, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_PAUSE, 1, false, null, $idShop);
 
-        // Multilingual defaults
-        $messages = [];
-        $ctaTexts = [];
+        // Create default message (bg_color is now global)
+        $defaultMessage = [
+            'id' => 1,
+            'message' => [],
+            'text_color' => '#ffffff',
+            'font_family' => 'system-ui',
+            'animation' => 'none',
+            'start_date' => '',
+            'end_date' => '',
+            'countdown' => 0,
+            'cta_enabled' => 0,
+            'cta_text' => [],
+            'cta_url' => '',
+            'cta_bg_color' => 'transparent',
+            'cta_text_color' => '#ffffff',
+            'cta_border' => '#ffffff',
+        ];
+
         foreach (Language::getLanguages(false) as $lang) {
             $idLang = (int) $lang['id_lang'];
-            $messages[$idLang] = $this->l('Your message here.');
-            $ctaTexts[$idLang] = $this->l('Learn more');
+            $defaultMessage['message'][$idLang] = $this->l('Your message here.');
+            $defaultMessage['cta_text'][$idLang] = $this->l('Learn more');
         }
-        Configuration::updateValue(self::CFG_MESSAGE, $messages, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_TEXT, $ctaTexts, false, null, $idShop);
+
+        $messages = [$defaultMessage];
+        Configuration::updateValue(self::CFG_MESSAGES, json_encode($messages), false, null, $idShop);
 
         // Hooks
         $ok = $this->registerHook('displayTop')
             && $this->registerHook('displayAfterBodyOpeningTag')
             && $this->registerHook('header');
 
-        $this->maybeMigrateOldKeys($idShop);
+        $this->migrateLegacyConfig($idShop);
         return $ok;
     }
 
-    private function maybeMigrateOldKeys($idShop)
+    private function migrateLegacyConfig($idShop)
     {
-        $map = [
+        // Check if we need to migrate from old single-message format
+        $existingMessages = Configuration::get(self::CFG_MESSAGES, null, null, $idShop);
+        if ($existingMessages) {
+            return; // Already using new format
+        }
+
+        // Migrate old BEDOM_AB_* keys first
+        $oldKeyMap = [
             'BEDOM_AB_ENABLED' => self::CFG_ENABLED,
             'BEDOM_AB_DISMISSIBLE' => self::CFG_DISMISSIBLE,
             'BEDOM_AB_BG_COLOR' => self::CFG_BG_COLOR,
             'BEDOM_AB_TEXT_COLOR' => self::CFG_TEXT_COLOR,
             'BEDOM_AB_START_DATE' => self::CFG_START_DATE,
             'BEDOM_AB_END_DATE' => self::CFG_END_DATE,
-            'BEDOM_AB_MESSAGE' => self::CFG_MESSAGE,
         ];
 
-        foreach ($map as $old => $new) {
-            if ($old === 'BEDOM_AB_MESSAGE') {
-                foreach (Language::getLanguages(false) as $lang) {
-                    $idLang = (int) $lang['id_lang'];
-                    $oldVal = Configuration::get($old, $idLang, null, $idShop);
-                    $newVal = Configuration::get($new, $idLang, null, $idShop);
-                    if ($oldVal !== false && $newVal === false) {
-                        Configuration::updateValue($new, [$idLang => $oldVal], false, null, $idShop);
-                    }
-                }
-            } else {
-                $oldVal = Configuration::get($old, null, null, $idShop);
-                $newVal = Configuration::get($new, null, null, $idShop);
-                if ($oldVal !== false && $newVal === false) {
-                    Configuration::updateValue($new, $oldVal, false, null, $idShop);
-                }
+        foreach ($oldKeyMap as $old => $new) {
+            $oldVal = Configuration::get($old, null, null, $idShop);
+            if ($oldVal !== false) {
+                Configuration::updateValue($new, $oldVal, false, null, $idShop);
             }
         }
+
+        // Check if we have old message config
+        $oldMessage = Configuration::get(self::CFG_MESSAGE, null, null, $idShop);
+        if (!$oldMessage || $oldMessage === 'Your message here.') {
+            return; // No legacy config to migrate
+        }
+
+        // Build migrated message from legacy config (bg_color is now global, not per-message)
+        $migratedMessage = [
+            'id' => 1,
+            'message' => [],
+            'text_color' => Configuration::get(self::CFG_TEXT_COLOR, null, null, $idShop) ?: '#ffffff',
+            'font_family' => Configuration::get(self::CFG_FONT_FAMILY, null, null, $idShop) ?: 'system-ui',
+            'animation' => Configuration::get(self::CFG_ANIMATION, null, null, $idShop) ?: 'none',
+            'start_date' => Configuration::get(self::CFG_START_DATE, null, null, $idShop) ?: '',
+            'end_date' => Configuration::get(self::CFG_END_DATE, null, null, $idShop) ?: '',
+            'countdown' => (int) Configuration::get(self::CFG_COUNTDOWN, null, null, $idShop),
+            'cta_enabled' => (int) Configuration::get(self::CFG_CTA_ENABLED, null, null, $idShop),
+            'cta_text' => [],
+            'cta_url' => Configuration::get(self::CFG_CTA_URL, null, null, $idShop) ?: '',
+            'cta_bg_color' => Configuration::get(self::CFG_CTA_BG_COLOR, null, null, $idShop) ?: 'transparent',
+            'cta_text_color' => Configuration::get(self::CFG_CTA_TEXT_COLOR, null, null, $idShop) ?: '#ffffff',
+            'cta_border' => Configuration::get(self::CFG_CTA_BORDER, null, null, $idShop) ?: '#ffffff',
+        ];
+
+        // Get multilingual message text
+        foreach (Language::getLanguages(false) as $lang) {
+            $idLang = (int) $lang['id_lang'];
+            $migratedMessage['message'][$idLang] = Configuration::get(self::CFG_MESSAGE, $idLang, null, $idShop) ?: '';
+            $migratedMessage['cta_text'][$idLang] = Configuration::get(self::CFG_CTA_TEXT, $idLang, null, $idShop) ?: '';
+        }
+
+        $messages = [$migratedMessage];
+        Configuration::updateValue(self::CFG_MESSAGES, json_encode($messages), false, null, $idShop);
     }
 
     public function uninstall()
@@ -142,15 +196,23 @@ class Promobar extends Module
         $keys = [
             self::CFG_ENABLED,
             self::CFG_DISMISSIBLE,
-            self::CFG_MESSAGE,
+            self::CFG_POSITION,
+            self::CFG_COOKIE_DAYS,
             self::CFG_BG_COLOR,
+            self::CFG_CONTROLS_COLOR,
+            self::CFG_CAROUSEL_ENABLED,
+            self::CFG_CAROUSEL_TRANSITION,
+            self::CFG_CAROUSEL_INTERVAL,
+            self::CFG_CAROUSEL_ARROWS,
+            self::CFG_CAROUSEL_PAUSE,
+            self::CFG_MESSAGES,
+            // Legacy keys (in case they still exist)
+            self::CFG_MESSAGE,
             self::CFG_TEXT_COLOR,
             self::CFG_START_DATE,
             self::CFG_END_DATE,
-            self::CFG_COOKIE_DAYS,
             self::CFG_FONT_FAMILY,
             self::CFG_ANIMATION,
-            self::CFG_POSITION,
             self::CFG_COUNTDOWN,
             self::CFG_CTA_ENABLED,
             self::CFG_CTA_TEXT,
@@ -183,12 +245,13 @@ class Promobar extends Module
     {
         $idShop = (int) $this->context->shop->id;
 
+        // Global settings
         $enabled = (int) Tools::getValue(self::CFG_ENABLED, 0);
         $dismiss = (int) Tools::getValue(self::CFG_DISMISSIBLE, 0);
-        $bg = Tools::substr(trim((string) Tools::getValue(self::CFG_BG_COLOR, '#111111')), 0, 20);
-        $fg = Tools::substr(trim((string) Tools::getValue(self::CFG_TEXT_COLOR, '#ffffff')), 0, 20);
-        $start = Tools::substr(trim((string) Tools::getValue(self::CFG_START_DATE, '')), 0, 10);
-        $end = Tools::substr(trim((string) Tools::getValue(self::CFG_END_DATE, '')), 0, 10);
+        $position = (string) Tools::getValue(self::CFG_POSITION, 'afterbody');
+        if (!in_array($position, ['afterbody', 'top'], true)) {
+            $position = 'afterbody';
+        }
 
         $cookieDays = (int) Tools::getValue(self::CFG_COOKIE_DAYS, 30);
         $allowedCookie = [1, 3, 7, 15, 30, 90, 365];
@@ -196,105 +259,138 @@ class Promobar extends Module
             $cookieDays = 30;
         }
 
-        $fontFamily = (string) Tools::getValue(self::CFG_FONT_FAMILY, 'system-ui');
-        $fontWhitelist = $this->getFontWhitelist();
-        if (!isset($fontWhitelist[$fontFamily])) {
-            $fontFamily = 'system-ui';
+        // Carousel settings
+        $carouselEnabled = (int) Tools::getValue(self::CFG_CAROUSEL_ENABLED, 0);
+        $carouselTransition = (string) Tools::getValue(self::CFG_CAROUSEL_TRANSITION, 'fade');
+        if (!in_array($carouselTransition, ['fade', 'slide'], true)) {
+            $carouselTransition = 'fade';
         }
-
-        $animation = (string) Tools::getValue(self::CFG_ANIMATION, 'none');
-        $allowedAnim = ['none', 'scroll', 'pulse', 'blink'];
-        if (!in_array($animation, $allowedAnim, true)) {
-            $animation = 'none';
+        $carouselInterval = (int) Tools::getValue(self::CFG_CAROUSEL_INTERVAL, 5);
+        if ($carouselInterval < 1) {
+            $carouselInterval = 5;
         }
+        $carouselArrows = (int) Tools::getValue(self::CFG_CAROUSEL_ARROWS, 1);
+        $carouselPause = (int) Tools::getValue(self::CFG_CAROUSEL_PAUSE, 1);
 
-        $position = (string) Tools::getValue(self::CFG_POSITION, 'afterbody');
-        if (!in_array($position, ['afterbody', 'top'], true)) {
-            $position = 'afterbody';
-        }
-
-        $countdown = (int) Tools::getValue(self::CFG_COUNTDOWN, 0);
-
-        // Dates
-        $reDate = '/^\d{4}-\d{2}-\d{2}$/';
-        if ($start && !preg_match($reDate, $start)) {
-            $start = '';
-        }
-        if ($end && !preg_match($reDate, $end)) {
-            $end = '';
-        }
-
-        // Colors
+        // Global background color
         $reColor = '/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$|^transparent$/i';
-        if (!preg_match($reColor, $bg)) {
-            $bg = '#111111';
-        }
-        if (!preg_match($reColor, $fg)) {
-            $fg = '#ffffff';
+        $bgColor = Tools::substr(trim((string) Tools::getValue(self::CFG_BG_COLOR, '#111111')), 0, 20);
+        if (!preg_match($reColor, $bgColor)) {
+            $bgColor = '#111111';
         }
 
-        // Multilingual message (plain text only)
-        $messages = [];
-        foreach (Language::getLanguages(false) as $lang) {
-            $val = (string) Tools::getValue(self::CFG_MESSAGE . '_' . $lang['id_lang'], '');
-            $val = Tools::substr(trim($val), 0, 1000);
-            $val = strip_tags($val);
-            $messages[(int) $lang['id_lang']] = $val;
+        // Controls color (dark or light)
+        $controlsColor = (string) Tools::getValue(self::CFG_CONTROLS_COLOR, 'light');
+        if (!in_array($controlsColor, ['dark', 'light'], true)) {
+            $controlsColor = 'light';
         }
 
-        // CTA
-        $ctaEnabled = (int) Tools::getValue(self::CFG_CTA_ENABLED, 0);
-        $ctaTexts = [];
-        foreach (Language::getLanguages(false) as $lang) {
-            $t = (string) Tools::getValue(self::CFG_CTA_TEXT . '_' . $lang['id_lang'], '');
-            $t = Tools::substr(trim($t), 0, 80);
-            $t = Tools::purifyHTML($t);
-            $ctaTexts[(int) $lang['id_lang']] = $t;
+        // Process messages
+        $messagesData = Tools::getValue('messages', []);
+        $validatedMessages = [];
+        $fontWhitelist = $this->getFontWhitelist();
+        $allowedAnim = ['none', 'scroll', 'pulse', 'blink'];
+        $reDate = '/^\d{4}-\d{2}-\d{2}$/';
+
+        foreach ($messagesData as $msgData) {
+            if (!is_array($msgData)) {
+                continue;
+            }
+
+            $message = [
+                'id' => isset($msgData['id']) ? (int) $msgData['id'] : count($validatedMessages) + 1,
+                'message' => [],
+                'text_color' => '#ffffff',
+                'font_family' => 'system-ui',
+                'animation' => 'none',
+                'start_date' => '',
+                'end_date' => '',
+                'countdown' => 0,
+                'cta_enabled' => 0,
+                'cta_text' => [],
+                'cta_url' => '',
+                'cta_bg_color' => 'transparent',
+                'cta_text_color' => '#ffffff',
+                'cta_border' => '#ffffff',
+            ];
+
+            // Multilingual message text
+            if (isset($msgData['message']) && is_array($msgData['message'])) {
+                foreach ($msgData['message'] as $idLang => $text) {
+                    $text = Tools::substr(trim(strip_tags((string) $text)), 0, 1000);
+                    $message['message'][(int) $idLang] = $text;
+                }
+            }
+
+            // Text color
+            if (isset($msgData['text_color']) && preg_match($reColor, $msgData['text_color'])) {
+                $message['text_color'] = $msgData['text_color'];
+            }
+
+            // Font and animation
+            if (isset($msgData['font_family']) && isset($fontWhitelist[$msgData['font_family']])) {
+                $message['font_family'] = $msgData['font_family'];
+            }
+            if (isset($msgData['animation']) && in_array($msgData['animation'], $allowedAnim, true)) {
+                $message['animation'] = $msgData['animation'];
+            }
+
+            // Dates
+            if (isset($msgData['start_date']) && preg_match($reDate, $msgData['start_date'])) {
+                $message['start_date'] = $msgData['start_date'];
+            }
+            if (isset($msgData['end_date']) && preg_match($reDate, $msgData['end_date'])) {
+                $message['end_date'] = $msgData['end_date'];
+            }
+
+            // Countdown
+            $message['countdown'] = isset($msgData['countdown']) ? (int) $msgData['countdown'] : 0;
+
+            // CTA
+            $message['cta_enabled'] = isset($msgData['cta_enabled']) ? (int) $msgData['cta_enabled'] : 0;
+
+            if (isset($msgData['cta_text']) && is_array($msgData['cta_text'])) {
+                foreach ($msgData['cta_text'] as $idLang => $text) {
+                    $text = Tools::substr(trim(Tools::purifyHTML((string) $text)), 0, 80);
+                    $message['cta_text'][(int) $idLang] = $text;
+                }
+            }
+
+            if (isset($msgData['cta_url'])) {
+                $url = trim($msgData['cta_url']);
+                if ($url && filter_var($url, FILTER_VALIDATE_URL) && preg_match('#^https?://#i', $url)) {
+                    $message['cta_url'] = Tools::substr($url, 0, 255);
+                }
+            }
+
+            if (isset($msgData['cta_bg_color']) && preg_match($reColor, $msgData['cta_bg_color'])) {
+                $message['cta_bg_color'] = $msgData['cta_bg_color'];
+            }
+            if (isset($msgData['cta_text_color']) && preg_match($reColor, $msgData['cta_text_color'])) {
+                $message['cta_text_color'] = $msgData['cta_text_color'];
+            }
+            if (isset($msgData['cta_border']) && preg_match($reColor, $msgData['cta_border'])) {
+                $message['cta_border'] = $msgData['cta_border'];
+            }
+
+            $validatedMessages[] = $message;
         }
 
-        $ctaUrl = Tools::substr(trim((string) Tools::getValue(self::CFG_CTA_URL, '')), 0, 255);
-        if ($ctaUrl !== '' && !filter_var($ctaUrl, FILTER_VALIDATE_URL)) {
-            $ctaUrl = '';
-        }
-        if ($ctaUrl !== '' && !preg_match('#^https?://#i', $ctaUrl)) {
-            $ctaUrl = '';
-        }
-
-        $ctaBg = Tools::substr(trim((string) Tools::getValue(self::CFG_CTA_BG_COLOR, 'transparent')), 0, 20);
-        $ctaText = Tools::substr(trim((string) Tools::getValue(self::CFG_CTA_TEXT_COLOR, '#ffffff')), 0, 20);
-        $ctaBd = Tools::substr(trim((string) Tools::getValue(self::CFG_CTA_BORDER, '#ffffff')), 0, 20);
-        if (!preg_match($reColor, $ctaBg)) {
-            $ctaBg = 'transparent';
-        }
-        if (!preg_match($reColor, $ctaText)) {
-            $ctaText = '#ffffff';
-        }
-        if (!preg_match($reColor, $ctaBd)) {
-            $ctaBd = '#ffffff';
-        }
-
-        // Save
+        // Save all configuration
         Configuration::updateValue(self::CFG_ENABLED, $enabled, false, null, $idShop);
         Configuration::updateValue(self::CFG_DISMISSIBLE, $dismiss, false, null, $idShop);
-        Configuration::updateValue(self::CFG_BG_COLOR, $bg, false, null, $idShop);
-        Configuration::updateValue(self::CFG_TEXT_COLOR, $fg, false, null, $idShop);
-        Configuration::updateValue(self::CFG_START_DATE, $start, false, null, $idShop);
-        Configuration::updateValue(self::CFG_END_DATE, $end, false, null, $idShop);
-
-        Configuration::updateValue(self::CFG_COOKIE_DAYS, $cookieDays, false, null, $idShop);
-        Configuration::updateValue(self::CFG_FONT_FAMILY, $fontFamily, false, null, $idShop);
-        Configuration::updateValue(self::CFG_ANIMATION, $animation, false, null, $idShop);
         Configuration::updateValue(self::CFG_POSITION, $position, false, null, $idShop);
-        Configuration::updateValue(self::CFG_COUNTDOWN, $countdown, false, null, $idShop);
+        Configuration::updateValue(self::CFG_COOKIE_DAYS, $cookieDays, false, null, $idShop);
+        Configuration::updateValue(self::CFG_BG_COLOR, $bgColor, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CONTROLS_COLOR, $controlsColor, false, null, $idShop);
 
-        Configuration::updateValue(self::CFG_MESSAGE, $messages, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_ENABLED, $carouselEnabled, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_TRANSITION, $carouselTransition, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_INTERVAL, $carouselInterval, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_ARROWS, $carouselArrows, false, null, $idShop);
+        Configuration::updateValue(self::CFG_CAROUSEL_PAUSE, $carouselPause, false, null, $idShop);
 
-        Configuration::updateValue(self::CFG_CTA_ENABLED, $ctaEnabled, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_TEXT, $ctaTexts, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_URL, $ctaUrl, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_BG_COLOR, $ctaBg, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_TEXT_COLOR, $ctaText, false, null, $idShop);
-        Configuration::updateValue(self::CFG_CTA_BORDER, $ctaBd, false, null, $idShop);
+        Configuration::updateValue(self::CFG_MESSAGES, json_encode($validatedMessages), false, null, $idShop);
     }
 
     /** Whitelist of fonts (no external loads) */
@@ -315,211 +411,90 @@ class Promobar extends Module
     /** Build the configuration form */
     protected function renderForm()
     {
-        $defaultLang = (int) Configuration::get('PS_LANG_DEFAULT');
-        $fontWhitelist = $this->getFontWhitelist();
+        $idShop = (int) $this->context->shop->id;
 
-        $fieldsForm = [
-            'form' => [
-                'legend' => [
-                    'title' => $this->l('Banner settings'),
-                    'icon' => 'icon-cogs',
-                ],
-                'input' => [
-                    [
-                        'type' => 'select',
-                        'label' => $this->l('Display position'),
-                        'name' => self::CFG_POSITION,
-                        'options' => [
-                            'query' => [
-                                ['id' => 'afterbody', 'name' => $this->l('After opening <body> (recommended)')],
-                                ['id' => 'top', 'name' => $this->l('Top of page (displayTop)')],
-                            ],
-                            'id' => 'id',
-                            'name' => 'name',
-                        ],
-                        'desc' => $this->l('The banner will display on the chosen hook only to avoid duplicates.'),
-                    ],
-                    [
-                        'type' => 'switch',
-                        'label' => $this->l('Enable banner'),
-                        'name' => self::CFG_ENABLED,
-                        'is_bool' => true,
-                        'values' => [
-                            ['id' => 'on', 'value' => 1, 'label' => $this->l('Yes')],
-                            ['id' => 'off', 'value' => 0, 'label' => $this->l('No')],
-                        ],
-                    ],
-                    [
-                        'type' => 'switch',
-                        'label' => $this->l('Close button (do not show again)'),
-                        'name' => self::CFG_DISMISSIBLE,
-                        'is_bool' => true,
-                        'values' => [
-                            ['id' => 'on', 'value' => 1, 'label' => $this->l('Yes')],
-                            ['id' => 'off', 'value' => 0, 'label' => $this->l('No')],
-                        ],
-                    ],
-                    [
-                        'type' => 'select',
-                        'label' => $this->l('Cookie lifetime (close button)'),
-                        'name' => self::CFG_COOKIE_DAYS,
-                        'options' => [
-                            'query' => [
-                                ['id' => 1, 'name' => '1 day'],
-                                ['id' => 3, 'name' => '3 days'],
-                                ['id' => 7, 'name' => '7 days'],
-                                ['id' => 15, 'name' => '15 days'],
-                                ['id' => 30, 'name' => '30 days'],
-                                ['id' => 90, 'name' => '90 days'],
-                                ['id' => 365, 'name' => '365 days'],
-                            ],
-                            'id' => 'id',
-                            'name' => 'name',
-                        ],
-                        'desc' => $this->l('Used only if the “close” button is enabled.'),
-                    ],
-                    [
-                        'type' => 'textarea',
-                        'label' => $this->l('Message'),
-                        'name' => self::CFG_MESSAGE,
-                        'lang' => true,
-                        'rows' => 4,
-                        'autoload_rte' => false,
-                        'desc' => $this->l('Tip: use **bold** for emphasis and [text](https://your-url) to insert a link.'),
-                    ],
-                    [
-                        'type' => 'select',
-                        'label' => $this->l('Banner font'),
-                        'name' => self::CFG_FONT_FAMILY,
-                        'options' => [
-                            'query' => array_map(
-                                function ($k, $v) {
-                                    return ['id' => $k, 'name' => $k];
-                                },
-                                array_keys($fontWhitelist),
-                                $fontWhitelist
-                            ),
-                            'id' => 'id',
-                            'name' => 'name',
-                        ],
-                        'desc' => $this->l('Safe whitelist (no external resources loaded).'),
-                    ],
-                    [
-                        'type' => 'color',
-                        'label' => $this->l('Background color'),
-                        'name' => self::CFG_BG_COLOR,
-                    ],
-                    [
-                        'type' => 'color',
-                        'label' => $this->l('Text color'),
-                        'name' => self::CFG_TEXT_COLOR,
-                    ],
-                    [
-                        'type' => 'select',
-                        'label' => $this->l('Text animation'),
-                        'name' => self::CFG_ANIMATION,
-                        'options' => [
-                            'query' => [
-                                ['id' => 'none', 'name' => $this->l('None')],
-                                ['id' => 'scroll', 'name' => $this->l('Horizontal marquee')],
-                                ['id' => 'pulse', 'name' => $this->l('Soft pulse')],
-                                ['id' => 'blink', 'name' => $this->l('Light blink')],
-                            ],
-                            'id' => 'id',
-                            'name' => 'name',
-                        ],
-                        'desc' => $this->l('Respects accessibility preferences (reduced motion).'),
-                    ],
-                    [
-                        'type' => 'switch',
-                        'label' => $this->l('Show countdown (if end date set)'),
-                        'name' => self::CFG_COUNTDOWN,
-                        'is_bool' => true,
-                        'values' => [
-                            ['id' => 'on', 'value' => 1, 'label' => $this->l('Yes')],
-                            ['id' => 'off', 'value' => 0, 'label' => $this->l('No')],
-                        ],
-                        'desc' => $this->l('Automatically stops at the end date. Neutral appearance (black digits on white).'),
-                    ],
-                    [
-                        'type' => 'date',
-                        'label' => $this->l('Start date (optional)'),
-                        'name' => self::CFG_START_DATE,
-                    ],
-                    [
-                        'type' => 'date',
-                        'label' => $this->l('End date (optional)'),
-                        'name' => self::CFG_END_DATE,
-                    ],
-                    // CTA
-                    [
-                        'type' => 'switch',
-                        'label' => $this->l('Show a button'),
-                        'name' => self::CFG_CTA_ENABLED,
-                        'is_bool' => true,
-                        'values' => [
-                            ['id' => 'on', 'value' => 1, 'label' => $this->l('Yes')],
-                            ['id' => 'off', 'value' => 0, 'label' => $this->l('No')],
-                        ],
-                    ],
-                    [
-                        'type' => 'text',
-                        'label' => $this->l('Button text (multilingual)'),
-                        'name' => self::CFG_CTA_TEXT,
-                        'lang' => true,
-                    ],
-                    [
-                        'type' => 'text',
-                        'label' => $this->l('Button URL'),
-                        'name' => self::CFG_CTA_URL,
-                        'desc' => $this->l('Must start with http:// or https://'),
-                    ],
-                    [
-                        'type' => 'color',
-                        'label' => $this->l('Button background color'),
-                        'name' => self::CFG_CTA_BG_COLOR,
-                    ],
-                    [
-                        'type' => 'color',
-                        'label' => $this->l('Button text color'),
-                        'name' => self::CFG_CTA_TEXT_COLOR,
-                    ],
-                    [
-                        'type' => 'color',
-                        'label' => $this->l('Button border color'),
-                        'name' => self::CFG_CTA_BORDER,
-                    ],
-                ],
-                'submit' => [
-                    'title' => $this->l('Save'),
-                    'name' => 'submitPromobar',
-                ],
+        // Load messages from JSON
+        $messagesJson = Configuration::get(self::CFG_MESSAGES, null, null, $idShop);
+        $messages = [];
+        if ($messagesJson) {
+            $decoded = json_decode($messagesJson, true);
+            if (is_array($decoded)) {
+                $messages = $decoded;
+            }
+        }
+
+        // If no messages, create default
+        if (empty($messages)) {
+            $defaultMessage = [
+                'id' => 1,
+                'message' => [],
+                'text_color' => '#ffffff',
+                'font_family' => 'system-ui',
+                'animation' => 'none',
+                'start_date' => '',
+                'end_date' => '',
+                'countdown' => 0,
+                'cta_enabled' => 0,
+                'cta_text' => [],
+                'cta_url' => '',
+                'cta_bg_color' => 'transparent',
+                'cta_text_color' => '#ffffff',
+                'cta_border' => '#ffffff',
+            ];
+            foreach (Language::getLanguages(false) as $lang) {
+                $idLang = (int) $lang['id_lang'];
+                $defaultMessage['message'][$idLang] = $this->l('Your message here.');
+                $defaultMessage['cta_text'][$idLang] = $this->l('Learn more');
+            }
+            $messages = [$defaultMessage];
+        }
+
+        // Prepare template variables
+        $this->context->smarty->assign([
+            'form_action' => AdminController::$currentIndex . '&configure=' . $this->name . '&token=' . Tools::getAdminTokenLite('AdminModules'),
+            'CFG_POSITION' => self::CFG_POSITION,
+            'CFG_ENABLED' => self::CFG_ENABLED,
+            'CFG_DISMISSIBLE' => self::CFG_DISMISSIBLE,
+            'CFG_COOKIE_DAYS' => self::CFG_COOKIE_DAYS,
+            'CFG_BG_COLOR' => self::CFG_BG_COLOR,
+            'CFG_CONTROLS_COLOR' => self::CFG_CONTROLS_COLOR,
+            'CFG_CAROUSEL_ENABLED' => self::CFG_CAROUSEL_ENABLED,
+            'CFG_CAROUSEL_TRANSITION' => self::CFG_CAROUSEL_TRANSITION,
+            'CFG_CAROUSEL_INTERVAL' => self::CFG_CAROUSEL_INTERVAL,
+            'CFG_CAROUSEL_ARROWS' => self::CFG_CAROUSEL_ARROWS,
+            'CFG_CAROUSEL_PAUSE' => self::CFG_CAROUSEL_PAUSE,
+            'position' => Configuration::get(self::CFG_POSITION, null, null, $idShop) ?: 'afterbody',
+            'enabled' => (int) Configuration::get(self::CFG_ENABLED, null, null, $idShop),
+            'dismissible' => (int) Configuration::get(self::CFG_DISMISSIBLE, null, null, $idShop),
+            'cookie_days' => (int) Configuration::get(self::CFG_COOKIE_DAYS, null, null, $idShop) ?: 30,
+            'bg_color' => Configuration::get(self::CFG_BG_COLOR, null, null, $idShop) ?: '#111111',
+            'controls_color' => Configuration::get(self::CFG_CONTROLS_COLOR, null, null, $idShop) ?: 'light',
+            'cookie_options' => [
+                ['value' => 1, 'label' => '1 ' . $this->l('day')],
+                ['value' => 3, 'label' => '3 ' . $this->l('days')],
+                ['value' => 7, 'label' => '7 ' . $this->l('days')],
+                ['value' => 15, 'label' => '15 ' . $this->l('days')],
+                ['value' => 30, 'label' => '30 ' . $this->l('days')],
+                ['value' => 90, 'label' => '90 ' . $this->l('days')],
+                ['value' => 365, 'label' => '365 ' . $this->l('days')],
             ],
-        ];
+            'carousel_enabled' => (int) Configuration::get(self::CFG_CAROUSEL_ENABLED, null, null, $idShop),
+            'carousel_transition' => Configuration::get(self::CFG_CAROUSEL_TRANSITION, null, null, $idShop) ?: 'fade',
+            'carousel_interval' => (int) Configuration::get(self::CFG_CAROUSEL_INTERVAL, null, null, $idShop) ?: 5,
+            'carousel_arrows' => (int) Configuration::get(self::CFG_CAROUSEL_ARROWS, null, null, $idShop),
+            'carousel_pause' => (int) Configuration::get(self::CFG_CAROUSEL_PAUSE, null, null, $idShop),
+            'messages' => $messages,
+            'languages' => Language::getLanguages(false),
+            'font_options' => array_keys($this->getFontWhitelist()),
+            'animation_options' => [
+                ['value' => 'none', 'label' => $this->l('None')],
+                ['value' => 'scroll', 'label' => $this->l('Horizontal marquee')],
+                ['value' => 'pulse', 'label' => $this->l('Soft pulse')],
+                ['value' => 'blink', 'label' => $this->l('Light blink')],
+            ],
+        ]);
 
-        $helper = new HelperForm();
-        $helper->module = $this;
-        $helper->name_controller = $this->name;
-        $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
-        $helper->default_form_language = $defaultLang;
-        $helper->allow_employee_form_lang = (int) Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG');
-        $helper->title = $this->displayName;
-        $helper->show_toolbar = false;
-        $helper->submit_action = 'submitPromobar';
-
-        $helper->languages = $this->context->controller->getLanguages();
-        // Do NOT set $helper->id_language (may not exist in some PS versions)
-
-        $fieldsValue = $this->getConfigValues();
-        $helper->fields_value = $fieldsValue;
-        $helper->tpl_vars = [
-            'fields_value' => $fieldsValue,
-            'languages' => $helper->languages,
-            'id_language' => (int) $this->context->language->id,
-        ];
-
-        return $helper->generateForm([$fieldsForm]);
+        return $this->display(__FILE__, 'views/templates/admin/configure.tpl');
     }
     /** Render the author's badge/card with logo and social links */
     protected function renderAuthorCard()
@@ -667,86 +642,123 @@ class Promobar extends Module
     private function renderBar()
     {
         $idShop = (int) $this->context->shop->id;
+
         if (!(int) Configuration::get(self::CFG_ENABLED, null, null, $idShop)) {
             return '';
         }
 
-        // Period
-        $start = (string) Configuration::get(self::CFG_START_DATE, null, null, $idShop);
-        $end = (string) Configuration::get(self::CFG_END_DATE, null, null, $idShop);
-        $today = new \DateTime('now');
-
-        try {
-            $eligibleStart = !$start || ($today >= new \DateTime($start . ' 00:00:00'));
-            $eligibleEnd = !$end || ($today <= new \DateTime($end . ' 23:59:59'));
-            $show = $eligibleStart && $eligibleEnd;
-        } catch (\Exception $e) {
-            $show = true;
-        }
-
-        if (!$show) {
-            return '';
-        }
-
-        $idLang = (int) $this->context->language->id;
-        $message = (string) Configuration::get(self::CFG_MESSAGE, $idLang, null, $idShop);
-        $message = trim($message);
-        if ($message === '') {
-            return '';
-        }
-
-        // Safe HTML (rendered client-side via data-html to satisfy validator)
-        $messageHtml = $this->renderMiniMarkup($message);
-
+        // Check if already dismissed (bypass with ?promobar_test=1 for testing)
         $dismissible = (int) Configuration::get(self::CFG_DISMISSIBLE, null, null, $idShop);
-        if (Tools::getValue('promobar_preview') != 1) {
+        if (Tools::getValue('promobar_preview') != 1 && Tools::getValue('promobar_test') != 1) {
             if ($dismissible && isset($_COOKIE['promobar_dismissed']) && $_COOKIE['promobar_dismissed'] === '1') {
                 return '';
             }
         }
 
-        // Countdown
-        $countdownEnabled = (int) Configuration::get(self::CFG_COUNTDOWN, null, null, $idShop);
-        $countdownEndIso = '';
-        if ($countdownEnabled && $end) {
-            try {
-                $dtEnd = new \DateTime($end . ' 23:59:59');
-                if ($dtEnd > $today) {
-                    $countdownEndIso = $dtEnd->getTimestamp() * 1000;
-                } else {
-                    $countdownEnabled = 0;
-                }
-            } catch (\Exception $e) {
-                // ignore
+        // Load messages from JSON
+        $messagesJson = Configuration::get(self::CFG_MESSAGES, null, null, $idShop);
+        $messages = [];
+        if ($messagesJson) {
+            $decoded = json_decode($messagesJson, true);
+            if (is_array($decoded)) {
+                $messages = $decoded;
             }
         }
 
-        // CTA
-        $ctaEnabled = (int) Configuration::get(self::CFG_CTA_ENABLED, null, null, $idShop);
-        $ctaText = (string) Configuration::get(self::CFG_CTA_TEXT, $idLang, null, $idShop);
-        $ctaUrl = (string) Configuration::get(self::CFG_CTA_URL, null, null, $idShop);
+        if (empty($messages)) {
+            return '';
+        }
+
+        // Filter messages by date range
+        $today = new \DateTime('now');
+        $idLang = (int) $this->context->language->id;
+        $activeMessages = [];
+
+        foreach ($messages as $msg) {
+            // Check date range
+            $startDate = isset($msg['start_date']) ? $msg['start_date'] : '';
+            $endDate = isset($msg['end_date']) ? $msg['end_date'] : '';
+
+            try {
+                $eligibleStart = !$startDate || ($today >= new \DateTime($startDate . ' 00:00:00'));
+                $eligibleEnd = !$endDate || ($today <= new \DateTime($endDate . ' 23:59:59'));
+                $isActive = $eligibleStart && $eligibleEnd;
+            } catch (\Exception $e) {
+                $isActive = true;
+            }
+
+            if (!$isActive) {
+                continue;
+            }
+
+            // Check if message has text for current language
+            $messageText = isset($msg['message'][$idLang]) ? trim($msg['message'][$idLang]) : '';
+            if ($messageText === '') {
+                continue;
+            }
+
+            // Process message
+            $processedMsg = [
+                'id' => $msg['id'],
+                'message_html' => $this->renderMiniMarkup($messageText),
+                'message_plain' => $messageText,
+                'text_color' => $msg['text_color'],
+                'font_family' => $msg['font_family'],
+                'animation' => $msg['animation'],
+            ];
+
+            // Process countdown
+            $processedMsg['countdown_enabled'] = 0;
+            $processedMsg['countdown_end'] = '';
+            if ($msg['countdown'] && $endDate) {
+                try {
+                    $dtEnd = new \DateTime($endDate . ' 23:59:59');
+                    if ($dtEnd > $today) {
+                        $processedMsg['countdown_enabled'] = 1;
+                        $processedMsg['countdown_end'] = $dtEnd->getTimestamp() * 1000;
+                    }
+                } catch (\Exception $e) {
+                    // ignore
+                }
+            }
+
+            // Process CTA
+            $processedMsg['cta_enabled'] = $msg['cta_enabled'];
+            $processedMsg['cta_text'] = isset($msg['cta_text'][$idLang]) ? trim($msg['cta_text'][$idLang]) : '';
+            $processedMsg['cta_url'] = $msg['cta_url'];
+            $processedMsg['cta_bg_color'] = $msg['cta_bg_color'];
+            $processedMsg['cta_text_color'] = $msg['cta_text_color'];
+            $processedMsg['cta_border'] = $msg['cta_border'];
+
+            $activeMessages[] = $processedMsg;
+        }
+
+        if (empty($activeMessages)) {
+            return '';
+        }
+
+        // Get carousel settings
+        $carouselEnabled = (int) Configuration::get(self::CFG_CAROUSEL_ENABLED, null, null, $idShop);
+        $fontWhitelist = $this->getFontWhitelist();
+
+        // If carousel disabled or only one message, disable carousel mode
+        if (!$carouselEnabled || count($activeMessages) === 1) {
+            $carouselEnabled = 0;
+        }
 
         $this->context->smarty->assign([
-            'promobar_message' => $messageHtml,     // sanitized HTML string
-            'promobar_message_plain' => $message,         // fallback text
-
-            'promobar_bg' => (string) Configuration::get(self::CFG_BG_COLOR, null, null, $idShop),
-            'promobar_fg' => (string) Configuration::get(self::CFG_TEXT_COLOR, null, null, $idShop),
+            'promobar_messages' => $activeMessages,
+            'promobar_bg_color' => Configuration::get(self::CFG_BG_COLOR, null, null, $idShop) ?: '#111111',
+            'promobar_controls_color' => Configuration::get(self::CFG_CONTROLS_COLOR, null, null, $idShop) ?: 'light',
+            'promobar_carousel_enabled' => $carouselEnabled,
+            'promobar_carousel_transition' => Configuration::get(self::CFG_CAROUSEL_TRANSITION, null, null, $idShop) ?: 'fade',
+            'promobar_carousel_interval' => (int) Configuration::get(self::CFG_CAROUSEL_INTERVAL, null, null, $idShop) ?: 5,
+            'promobar_carousel_arrows' => (int) Configuration::get(self::CFG_CAROUSEL_ARROWS, null, null, $idShop),
+            'promobar_carousel_pause' => (int) Configuration::get(self::CFG_CAROUSEL_PAUSE, null, null, $idShop),
             'promobar_dismissible' => $dismissible,
             'promobar_cookie' => 'promobar_dismissed',
             'promobar_cookie_days' => (int) Configuration::get(self::CFG_COOKIE_DAYS, null, null, $idShop),
-            'promobar_font' => (string) Configuration::get(self::CFG_FONT_FAMILY, null, null, $idShop),
-            'promobar_animation' => (string) Configuration::get(self::CFG_ANIMATION, null, null, $idShop),
-
-            'promobar_countdown' => (int) $countdownEnabled,
-            'promobar_countdown_end' => $countdownEndIso,
-
-            'promobar_cta_enabled' => $ctaEnabled,
-            'promobar_cta_text' => trim($ctaText),
-            'promobar_cta_url' => $ctaUrl,
-            'promobar_cta_bg' => (string) Configuration::get(self::CFG_CTA_BG_COLOR, null, null, $idShop),
-            'promobar_cta_text_col' => (string) Configuration::get(self::CFG_CTA_TEXT_COLOR, null, null, $idShop),
-            'promobar_cta_border' => (string) Configuration::get(self::CFG_CTA_BORDER, null, null, $idShop),
+            'promobar_font_stacks' => $fontWhitelist,
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/displayTop.tpl');
